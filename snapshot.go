@@ -9,6 +9,11 @@ import (
 
 const snapshotAPI = "/api/snapshots"
 
+type DashboardWithMeta struct {
+	Meta      DashboardMeta `json:"meta"`
+	Dashboard interface{}   `json:"dashboard"`
+}
+
 type DashboardSnapshot struct {
 	Dashboard map[string]interface{} `json:"dashboard" binding:"Required"`
 	Name      string                 `json:"name"`
@@ -30,6 +35,30 @@ type SharedOptionSnaphost struct {
 	ExternalSnapshotURL  string `json:"externalSnapshotURL"`
 	ExternalSnapshotName string `json:"externalSnapshotName"`
 	ExternalEnabled      string `json:"externalEnabled"`
+}
+
+func (c *Client) GetByKey(key string) (*DashboardWithMeta, error) {
+	req, err := c.newRequest("GET", "/api/snapshots/"+key, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, errors.New(resp.Status)
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &DashboardWithMeta{}
+	err = json.Unmarshal(data, &result)
+	return result, err
 }
 
 func (c *Client) Create(snapshot *DashboardSnapshot) (*CreateSnaphostResponse, error) {
@@ -55,31 +84,6 @@ func (c *Client) Create(snapshot *DashboardSnapshot) (*CreateSnaphostResponse, e
 	}
 
 	result := &CreateSnaphostResponse{}
-	err = json.Unmarshal(data, &result)
-	return result, err
-
-}
-
-func (c *Client) GetSharingOptions() (*SharedOptionSnaphost, error) {
-	req, err := c.newRequest("GET", snapshotAPI+"/shared-options", nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, errors.New(resp.Status)
-	}
-
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	result := &SharedOptionSnaphost{}
 	err = json.Unmarshal(data, &result)
 	return result, err
 
